@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+    <meta charset="UTF-8">
+    <title>İstifadəçi Paneli | Neoline Technology</title>
+    <style>
+        :root { --p: #6366f1; --s: #10b981; --i: #06b6d4; --w: #f59e0b; --dark: #0f172a; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f8fafc; margin: 0; padding: 25px; }
+        .container { max-width: 1200px; margin: auto; background: white; padding: 35px; border-radius: 24px; box-shadow: 0 10px 40px rgba(0,0,0,0.03); }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f1f5f9; padding-bottom: 25px; margin-bottom: 30px; }
+        .logo-box { display: flex; align-items: center; }
+        .logo-icon { background: var(--p); color: white; padding: 10px 18px; border-radius: 12px; font-weight: 800; font-size: 20px; margin-right: 15px; }
+        .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 30px; }
+        .st-box { padding: 20px; border-radius: 16px; color: white; cursor: pointer; transition: 0.3s; }
+        table { width: 100%; border-collapse: collapse; }
+        th { padding: 15px; text-align: left; color: #64748b; border-bottom: 2px solid #f1f5f9; font-size: 13px; }
+        td { padding: 15px; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
+        .btn { padding: 12px 24px; border: none; border-radius: 12px; cursor: pointer; font-weight: bold; text-decoration: none; display: inline-block; transition: 0.3s; }
+        .btn:hover { opacity: 0.9; transform: translateY(-2px); }
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(5px); }
+        .m-content { background: white; margin: 8% auto; padding: 35px; border-radius: 24px; width: 500px; }
+        input, textarea, select { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #e2e8f0; border-radius: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo-box">
+                <div class="logo-icon">N</div>
+                <div><h2 style="margin:0; color:var(--dark);">Neoline</h2><small style="color:gray;">Technology Support</small></div>
+            </div>
+            <div style="display:flex; gap:15px; align-items: center;">
+                <a href="/create_ticket" class="btn" style="background:var(--p); color:white;">+ Yeni Müraciət</a>
+                <a href="/logout" style="color:var(--d); font-weight:bold; text-decoration:none; font-size:14px;">Çıxış ✕</a>
+            </div>
+        </div>
+
+        <div class="stats">
+            <div class="st-box" style="background: var(--dark);" onclick="filter('all')"><small>Müraciətlərim</small><br><b>{{ stats.total }}</b></div>
+            <div class="st-box" style="background: var(--w);" onclick="filter('Gözləmədə')"><small>Gözləyən</small><br><b>{{ stats.waiting }}</b></div>
+            <div class="st-box" style="background: var(--i);" onclick="filter('İcrada')"><small>İcrada</small><br><b>{{ stats.process }}</b></div>
+            <div class="st-box" style="background: var(--s);" onclick="filter('Tamamlandı')"><small>Həll olunan</small><br><b>{{ stats.closed }}</b></div>
+        </div>
+
+        <table>
+            <thead><tr><th>#ID / Tarix</th><th>Mövzu</th><th>Statusu Dəyiş</th><th>Fayl</th><th>Əməliyyat</th></tr></thead>
+            <tbody id="tBody">
+                {% for t in tickets %}
+                <tr class="t-row" data-status="{{ t.status }}">
+                    <td><span style="font-weight:bold; color:var(--p);">#{{ t.id }}</span><br><small style="color:gray;">{{ t.date_created.strftime('%d.%m.%Y %H:%M') }}</small></td>
+                    <td><b>{{ t.title }}</b></td>
+                    <td>
+                        <form action="/update_status/{{t.id}}" method="POST" style="margin:0;">
+                            <select onchange="this.form.submit()" name="status" style="margin:0; padding:6px; font-size:12px; width:auto; cursor:pointer;">
+                                <option {% if t.status=='Gözləmədə' %}selected{% endif %}>Gözləmədə</option>
+                                <option {% if t.status=='İcrada' %}selected{% endif %}>İcrada</option>
+                                <option {% if t.status=='Tamamlandı' %}selected{% endif %}>Tamamlandı</option>
+                            </select>
+                        </form>
+                    </td>
+                    <td>{% if t.file_path %}<button onclick="viewF('{{ url_for('static', filename='uploads/' + t.file_path) }}')" style="border:none; background:none; cursor:pointer; font-size: 18px;">👁️</button>{% else %}-{% endif %}</td>
+                    <td><button onclick="openU('{{t.id}}','{{t.title|e}}','{{t.description|e}}')" class="btn" style="background:var(--i); padding:6px 15px; font-size: 12px; color: white;">Redaktə</button></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div id="uMod" class="modal"><div class="m-content"><h3>Müraciəti Redaktə Et</h3><form id="uForm" method="POST" enctype="multipart/form-data"><input type="text" name="title" id="ut" required><textarea name="description" id="ud" rows="6" required></textarea><label style="font-size:12px; color:gray;">Yeni fayl yüklə (isteğe bağlı):</label><input type="file" name="file"><button type="submit" class="btn" style="background:var(--s); color:white; width:100%; margin-top:15px;">Dəyişiklikləri Saxla</button></form><button onclick="document.getElementById('uMod').style.display='none'" style="width:100%; margin-top:10px; background:none; border:none; color:gray; cursor:pointer;">Ləğv et</button></div></div>
+    <div id="fMod" class="modal"><div style="width:85%; height:85vh; background:white; margin:3% auto; border-radius:24px; overflow:hidden;"><div id="fBox" style="height:100%; display:flex; justify-content:center; align-items:center; background:#0f172a;"></div></div></div>
+
+    <script>
+        function filter(s) { document.querySelectorAll('.t-row').forEach(r => { r.style.display = (s === 'all' || r.dataset.status === s) ? '' : 'none'; }); }
+        function openU(id, t, d) { document.getElementById('uForm').action = "/edit_ticket/"+id; document.getElementById('ut').value = t; document.getElementById('ud').value = d; document.getElementById('uMod').style.display = 'block'; }
+        function viewF(u) { const ext = u.split('.').pop().toLowerCase(); const b = document.getElementById('fBox'); b.innerHTML = ['jpg','jpeg','png','gif'].includes(ext) ? `<img src="${u}" style="max-width:95%; max-height:95%; object-fit:contain;">` : `<iframe src="${u}" style="width:100%; height:100%; border:none;"></iframe>`; document.getElementById('fMod').style.display = 'block'; }
+        window.onclick = function(e) { if (e.target.className === 'modal') e.target.style.display = 'none'; }
+    </script>
+</body>
+</html>
